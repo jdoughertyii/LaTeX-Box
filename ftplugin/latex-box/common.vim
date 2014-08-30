@@ -25,20 +25,8 @@ setlocal efm+=%E!\ %m
 " More info for undefined control sequences
 setlocal efm+=%Z<argument>\ %m
 
-" More info for some errors
-setlocal efm+=%Cl.%l\ %m
-
 " Show or ignore warnings
 if g:LatexBox_show_warnings
-	" Parse biblatex warnings
-	setlocal efm+=%-C(biblatex)%.%#in\ t%.%#
-	setlocal efm+=%-C(biblatex)%.%#Please\ v%.%#
-	setlocal efm+=%-C(biblatex)%.%#LaTeX\ a%.%#
-	setlocal efm+=%-Z(biblatex)%m
-
-	" Parse hyperref warnings
-	setlocal efm+=%-C(hyperref)%.%#on\ input\ line\ %l.
-
 	for w in g:LatexBox_ignore_warnings
 		let warning = escape(substitute(w, '[\,]', '%\\\\&', 'g'), ' ')
 		exe 'setlocal efm+=%-G%.%#'. warning .'%.%#'
@@ -56,7 +44,6 @@ endif
 
 " Push file to file stack
 setlocal efm+=%+P**%f
-setlocal efm+=%+P**\"%f\"
 
 " Ignore unmatched lines
 setlocal efm+=%-G%.%#
@@ -127,8 +114,8 @@ function! LatexBox_GetMainTexFile()
 	endif
 
 	" 5. borrow the Vim-Latex-Suite method of finding it
-	if LatexBox_GetMainFileName() != expand('%:p')
-		let b:main_tex_file = LatexBox_GetMainFileName()
+	if Tex_GetMainFileName() != expand('%:p')
+		let b:main_tex_file = Tex_GetMainFileName()
 		return b:main_tex_file
 	endif
 
@@ -140,8 +127,6 @@ endfunction
 function! s:PromptForMainFile()
 	let saved_dir = getcwd()
 	execute 'cd ' . fnameescape(expand('%:p:h'))
-
-	" Prompt for file
 	let l:file = ''
 	while !filereadable(l:file)
 		let l:file = input('main LaTeX file: ', '', 'file')
@@ -150,16 +135,6 @@ function! s:PromptForMainFile()
 		endif
 	endwhile
 	let l:file = fnamemodify(l:file, ':p')
-
-	" Make persistent
-	let l:persistent = ''
-	while l:persistent !~ '\v^(y|n)'
-		let l:persistent = input('make choice persistent? (y, n) ')
-		if l:persistent == 'y'
-			call writefile([], l:file . '.latexmain')
-		endif
-	endwhile
-
 	execute 'cd ' . fnameescape(saved_dir)
 	return l:file
 endfunction
@@ -237,26 +212,25 @@ if !exists('g:LatexBox_viewer')
 	endif
 endif
 
-function! LatexBox_View(...)
-	let lvargs = join(a:000, ' ')
-	let outfile = LatexBox_GetOutputFile()
+function! LatexBox_View()
+	if expand("%:e") == "nw"
+		let outfile = "hott-exercises.pdf"
+	else
+		let outfile = LatexBox_GetOutputFile()
+	endif
 	if !filereadable(outfile)
 		echomsg fnamemodify(outfile, ':.') . ' is not readable'
 		return
 	endif
-	let cmd = g:LatexBox_viewer . ' ' . lvargs . ' ' . shellescape(outfile)
-	if has('win32')
-		let cmd = '!start /b ' . cmd . ' >nul'
-	else
-		let cmd = '!' . cmd . ' &>/dev/null &'
-	endif
+	let cmd = 'open -a Preview ' . shellescape(outfile)
+	let cmd = '!' . cmd . ' &>/dev/null &'
 	silent execute cmd
 	if !has("gui_running")
 		redraw!
 	endif
 endfunction
 
-command! -nargs=* LatexView call LatexBox_View('<args>')
+command! LatexView call LatexBox_View()
 " }}}
 
 " In Comment {{{
